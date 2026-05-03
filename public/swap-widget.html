@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS — DEX Swap</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=Cabinet+Grotesk:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #080b12;
+    --bg2:      #0d1120;
+    --bg3:      #111827;
+    --surface:  #131c2e;
+    --surface2: #1a2540;
+    --border:   rgba(255,255,255,0.06);
+    --border2:  rgba(255,255,255,0.12);
+    --accent:   #00e5c0;
+    --accent2:  #0084ff;
+    --accent3:  #7c3aff;
+    --red:      #ff4b6e;
+    --yellow:   #ffd166;
+    --orange:   #f7931a;
+    --text:     #e8edf5;
+    --text2:    #8896b0;
+    --text3:    #4d5f7a;
+  }
+
+  body {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 50% 60% at 20% 30%, rgba(0,229,192,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 50% at 80% 70%, rgba(124,58,255,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 60% 10%, rgba(0,132,255,0.05) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.014) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.014) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .page {
+    width: 100%;
+    max-width: 960px;
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  /* ─── SWAP CARD ─── */
+  .swap-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .swap-card::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(0,229,192,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .swap-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+  }
+
+  .swap-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 19px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dex-badge {
+    background: rgba(0,229,192,0.1);
+    border: 1px solid rgba(0,229,192,0.2);
+    color: var(--accent);
+    font-size: 10.5px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+
+  .slippage-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    border-radius: 10px;
+    padding: 7px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+
+  .slippage-btn:hover { border-color: var(--border2); color: var(--text); }
+
+  /* Token input boxes */
+  .token-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    transition: border-color 0.2s;
+    position: relative;
+  }
+
+  .token-box:focus-within { border-color: rgba(0,229,192,0.3); }
+
+  .token-label {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .token-balance {
+    color: var(--text3);
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .token-balance:hover { color: var(--accent); }
+
+  .token-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .token-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: border-color 0.2s;
+  }
+
+  .token-selector:hover { border-color: var(--border2); }
+
+  .token-icon {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .token-symbol {
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .token-caret { color: var(--text3); font-size: 10px; }
+
+  .amount-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    font-family: 'Syne', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text);
+    text-align: right;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .amount-input::placeholder { color: var(--text3); }
+
+  .usd-value {
+    text-align: right;
+    font-size: 12px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    margin-top: 6px;
+  }
+
+  /* Swap arrow */
+  .swap-arrow-wrap {
+    display: flex;
+    justify-content: center;
+    margin: -4px 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  .swap-arrow {
+    width: 40px; height: 40px;
+    background: var(--surface2);
+    border: 2px solid var(--bg3);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.25s;
+    color: var(--accent);
+  }
+
+  .swap-arrow:hover {
+    background: rgba(0,229,192,0.1);
+    border-color: rgba(0,229,192,0.3);
+    transform: rotate(180deg);
+  }
+
+  /* Route info */
+  .route-info {
+    margin: 14px 0;
+    padding: 12px 14px;
+    background: var(--bg3);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    display: none;
+  }
+
+  .route-info.visible { display: block; }
+
+  .route-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12.5px;
+    padding: 4px 0;
+    color: var(--text2);
+  }
+
+  .route-row + .route-row { border-top: 1px solid rgba(255,255,255,0.04); padding-top: 8px; margin-top: 4px; }
+
+  .route-key { color: var(--text3); font-family: 'DM Mono', monospace; font-size: 11px; }
+  .route-val { font-weight: 600; font-family: 'DM Mono', monospace; }
+
+  .route-path {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  .route-path-sep { color: var(--text3); }
+
+  .impact-low  { color: var(--accent); }
+  .impact-med  { color: var(--yellow); }
+  .impact-high { color: var(--red); }
+
+  /* Slippage settings */
+  .slippage-panel {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 14px;
+    display: none;
+  }
+
+  .slippage-panel.visible { display: block; }
+
+  .slippage-label {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+
+  .slippage-options {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .slip-opt {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .slip-opt:hover { border-color: var(--border2); color: var(--text); }
+  .slip-opt.active { background: rgba(0,229,192,0.1); border-color: rgba(0,229,192,0.3); color: var(--accent); }
+
+  .slip-custom {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    min-width: 80px;
+    transition: border-color 0.2s;
+  }
+
+  .slip-custom:focus { border-color: rgba(0,229,192,0.3); }
+
+  /* Swap button */
+  .swap-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 14px;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+    margin-top: 14px;
+  }
+
+  .swap-btn-primary {
+    background: linear-gradient(135deg, var(--accent), #00b896);
+    color: var(--bg);
+    box-shadow: 0 4px 24px rgba(0,229,192,0.25);
+  }
+
+  .swap-btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,229,192,0.35);
+  }
+
+  .swap-btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .swap-btn-outline {
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+  }
+
+  .swap-btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Loading spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(8,11,18,0.3);
+    border-top-color: var(--bg);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  /* TX Status */
+  .tx-status-card {
+    background: var(--bg3);
+    border-radius: 14px;
+    padding: 16px;
+    margin-top: 14px;
+    border: 1px solid var(--border);
+    display: none;
+  }
+
+  .tx-status-card.visible { display: block; }
+
+  .tx-status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .tx-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .tx-dot.pending  { background: var(--yellow); animation: pulse 1.5s infinite; }
+  .tx-dot.confirmed { background: var(--accent); }
+  .tx-dot.failed   { background: var(--red); }
+
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+  /* ─── RIGHT PANEL ─── */
+  .right-panel { display: flex; flex-direction: column; gap: 14px; }
+
+  .info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 20px;
+  }
+
+  .info-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+  }
+
+  .price-display {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 4px;
+    line-height: 1;
+  }
+
+  .price-sub {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 14px;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .stat-k { color: var(--text3); font-size: 12px; font-family: 'DM Mono', monospace; }
+  .stat-v { font-weight: 600; font-family: 'DM Mono', monospace; font-size: 12px; }
+
+  /* Pool bar */
+  .pool-bar {
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+
+  .pool-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 3px;
+    transition: width 0.6s ease;
+  }
+
+  /* Key input */
+  .key-section {
+    background: rgba(255,75,110,0.04);
+    border: 1px solid rgba(255,75,110,0.15);
+    border-radius: 14px;
+    padding: 16px;
+    margin-top: 14px;
+  }
+
+  .key-label {
+    font-size: 11px;
+    color: rgba(255,75,110,0.8);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .key-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+    letter-spacing: 0.04em;
+  }
+
+  .key-input:focus { border-color: rgba(255,75,110,0.3); }
+  .key-input::placeholder { color: var(--text3); }
+
+  .key-warning {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 6px;
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    line-height: 1.4;
+  }
+
+  .live-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulse 2s infinite;
+  }
+
+  /* Quotes animation */
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+  .route-info.visible { animation: fadeIn 0.3s ease; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 14px;
+    padding: 14px 18px;
+    font-size: 13.5px;
+    font-weight: 600;
+    z-index: 999;
+    transform: translateX(140%);
+    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    max-width: 320px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .toast.show { transform: translateX(0); }
+  .toast.success { border-color: rgba(0,229,192,0.3); }
+  .toast.error   { border-color: rgba(255,75,110,0.3); }
+
+  .loader-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 0 0 14px 14px;
+    animation: loadbar 3s linear forwards;
+  }
+
+  @keyframes loadbar { from { width:100%; } to { width:0%; } }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ─── LEFT: SWAP CARD ─── -->
+  <div class="swap-card">
+    <div class="swap-header">
+      <div class="swap-title">
+        ⇄ DEX Swap
+        <span class="dex-badge">SUNSWAP V2</span>
+      </div>
+      <button class="slippage-btn" id="slippageToggle">
+        ⚙ Slippage: <span id="slippageDisplay">0.5%</span>
+      </button>
+    </div>
+
+    <!-- SLIPPAGE PANEL -->
+    <div class="slippage-panel" id="slippagePanel">
+      <div class="slippage-label">MAX SLIPPAGE TOLERANCE</div>
+      <div class="slippage-options">
+        <button class="slip-opt" data-bps="10">0.1%</button>
+        <button class="slip-opt active" data-bps="50">0.5%</button>
+        <button class="slip-opt" data-bps="100">1.0%</button>
+        <button class="slip-opt" data-bps="300">3.0%</button>
+        <input class="slip-custom" type="number" placeholder="Custom %" min="0.01" max="50" step="0.1">
+      </div>
+    </div>
+
+    <!-- FROM: BTC -->
+    <div class="token-box">
+      <div class="token-label">
+        <span>YOU SEND</span>
+        <span class="token-balance" id="btcBalanceLabel">Balance: — BTC</span>
+      </div>
+      <div class="token-row">
+        <div class="token-selector">
+          <div class="token-icon" style="background:rgba(247,147,26,0.15);">₿</div>
+          <span class="token-symbol">BTC</span>
+          <span class="token-caret">▼</span>
+        </div>
+        <input class="amount-input" id="btcInput" type="number" placeholder="0.00" min="0" step="0.00001">
+      </div>
+      <div class="usd-value" id="btcUsdValue">≈ $0.00</div>
+    </div>
+
+    <!-- SWAP ARROW -->
+    <div class="swap-arrow-wrap">
+      <div class="swap-arrow" id="swapArrow" title="Flip pair">⇅</div>
+    </div>
+
+    <!-- TO: USDT TRC-20 -->
+    <div class="token-box">
+      <div class="token-label">
+        <span>YOU RECEIVE</span>
+        <span class="token-balance" id="usdtBalanceLabel">Balance: — USDT</span>
+      </div>
+      <div class="token-row">
+        <div class="token-selector">
+          <div class="token-icon" style="background:rgba(0,187,97,0.15);">₮</div>
+          <span class="token-symbol" style="font-size:13px;">USDT<br><span style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;">TRC-20</span></span>
+          <span class="token-caret">▼</span>
+        </div>
+        <input class="amount-input" id="usdtOutput" type="number" placeholder="0.00" readonly style="color:var(--accent);">
+      </div>
+      <div class="usd-value" id="usdtUsdValue">≈ $0.00</div>
+    </div>
+
+    <!-- ROUTE DETAILS -->
+    <div class="route-info" id="routeInfo">
+      <div class="route-row">
+        <span class="route-key">ROUTE</span>
+        <div class="route-path">
+          <span>BTC</span><span class="route-path-sep">→</span>
+          <span>WTRX</span><span class="route-path-sep">→</span>
+          <span style="color:var(--accent);">USDT</span>
+        </div>
+      </div>
+      <div class="route-row">
+        <span class="route-key">RATE</span>
+        <span class="route-val" id="rateDisplay">—</span>
+      </div>
+      <div class="route-row">
+        <span class="route-key">PRICE IMPACT</span>
+        <span class="route-val" id="impactDisplay">—</span>
+      </div>
+      <div class="route-row">
+        <span class="route-key">DEX FEE (0.3%)</span>
+        <span class="route-val" id="feeDisplay">—</span>
+      </div>
+      <div class="route-row">
+        <span class="route-key">MIN. RECEIVED</span>
+        <span class="route-val" id="minOutDisplay">—</span>
+      </div>
+      <div class="route-row">
+        <span class="route-key">DEX</span>
+        <span class="route-val" style="color:var(--accent2);">SunSwap V2 · TRON</span>
+      </div>
+    </div>
+
+    <!-- PRIVATE KEY (for signing TRON tx) -->
+    <div class="key-section">
+      <div class="key-label">🔑 TRON PRIVATE KEY (SIGNING ONLY)</div>
+      <input class="key-input" id="privateKeyInput" type="password" placeholder="Enter your TRON private key to sign transaction…">
+      <div class="key-warning">
+        ⚠ Your key is sent directly to your Railway backend over HTTPS and never stored or logged. Use a dedicated hot-wallet address.
+      </div>
+    </div>
+
+    <!-- SWAP BUTTON -->
+    <button class="swap-btn swap-btn-primary" id="swapBtn" disabled>
+      Enter an amount
+    </button>
+
+    <!-- TX STATUS -->
+    <div class="tx-status-card" id="txCard">
+      <div class="tx-status-row">
+        <div class="tx-dot pending" id="txDot"></div>
+        <div style="flex:1;">
+          <div id="txStatusText" style="font-weight:700;font-size:13px;">Broadcasting…</div>
+          <div id="txHashText" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);margin-top:3px;word-break:break-all;"></div>
+        </div>
+        <a id="txLink" href="#" target="_blank" style="color:var(--accent2);font-size:12px;font-family:'DM Mono',monospace;white-space:nowrap;text-decoration:none;">View ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── RIGHT PANEL ─── -->
+  <div class="right-panel">
+
+    <!-- BTC PRICE -->
+    <div class="info-card">
+      <div class="info-title">
+        <span style="color:var(--orange);">₿</span> Bitcoin Price
+        <span class="live-dot"></span>
+      </div>
+      <div class="price-display" id="btcPriceDisplay">$—</div>
+      <div class="price-sub" id="btcPriceSub">Loading from CoinGecko…</div>
+
+      <div class="stat-row">
+        <span class="stat-k">USDT/TRX DEX RATE</span>
+        <span class="stat-v" id="trxRateDisplay">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-k">TRX EQUIVALENT</span>
+        <span class="stat-v" id="trxEquivDisplay">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-k">LAST UPDATED</span>
+        <span class="stat-v" id="lastUpdated">—</span>
+      </div>
+    </div>
+
+    <!-- POOL INFO -->
+    <div class="info-card">
+      <div class="info-title">⬡ SunSwap Pool — WTRX/USDT</div>
+      <div class="stat-row" style="border-top:none;padding-top:0;">
+        <span class="stat-k">LIQUIDITY</span>
+        <span class="stat-v" id="poolLiquidity">$124.4M</span>
+      </div>
+      <div class="pool-bar"><div class="pool-fill" style="width:78%;"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:8px;">
+        <span>WTRX 48%</span><span>USDT 52%</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-k">24H VOLUME</span>
+        <span class="stat-v" id="poolVolume">$8.2M</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-k">LP FEE</span>
+        <span class="stat-v" style="color:var(--accent);">0.30%</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-k">LP APY</span>
+        <span class="stat-v" style="color:var(--accent);">18.4%</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-k">NETWORK</span>
+        <span class="stat-v" style="color:#ef3c3c;">TRON (TRC-20)</span>
+      </div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div class="info-card">
+      <div class="info-title">ℹ How this swap works</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <div style="width:22px;height:22px;background:rgba(0,229,192,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0;">1</div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5;">BTC price is fetched from <strong style="color:var(--text);">CoinGecko</strong> in real-time to calculate USD value</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <div style="width:22px;height:22px;background:rgba(0,132,255,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent2);flex-shrink:0;">2</div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5;">The equivalent TRX amount is quoted via <strong style="color:var(--text);">SunSwap V2 Router</strong> getAmountsOut() on-chain</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <div style="width:22px;height:22px;background:rgba(124,58,255,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#a78bfa;flex-shrink:0;">3</div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5;">Your backend signs a <strong style="color:var(--text);">swapExactETHForTokens</strong> call on TronGrid and broadcasts to TRON mainnet</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <div style="width:22px;height:22px;background:rgba(255,209,102,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--yellow);flex-shrink:0;">4</div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5;">USDT TRC-20 lands in your TRON wallet. Track on <strong style="color:var(--text);">TronScan</strong></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span id="toastIcon">✓</span>
+  <span id="toastMsg">Done</span>
+  <div class="loader-bar" id="toastBar"></div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+// Replace with your Railway backend URL
+const API_BASE = window.location.hostname === 'localhost'
+  ? 'http://localhost:3001'
+  : 'https://YOUR-RAILWAY-APP.railway.app'; // ← change this
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+let state = {
+  btcUsd:        0,
+  trxUsd:        0,
+  quote:         null,
+  slippageBps:   50,
+  loading:       false,
+  txid:          null,
+  pollInterval:  null
+};
+
+// ─── DOM refs ───────────────────────────────────────────────────────────────
+const btcInput         = document.getElementById('btcInput');
+const usdtOutput       = document.getElementById('usdtOutput');
+const btcUsdValue      = document.getElementById('btcUsdValue');
+const usdtUsdValue     = document.getElementById('usdtUsdValue');
+const swapBtn          = document.getElementById('swapBtn');
+const routeInfo        = document.getElementById('routeInfo');
+const rateDisplay      = document.getElementById('rateDisplay');
+const impactDisplay    = document.getElementById('impactDisplay');
+const feeDisplay       = document.getElementById('feeDisplay');
+const minOutDisplay    = document.getElementById('minOutDisplay');
+const btcPriceDisplay  = document.getElementById('btcPriceDisplay');
+const btcPriceSub      = document.getElementById('btcPriceSub');
+const trxRateDisplay   = document.getElementById('trxRateDisplay');
+const trxEquivDisplay  = document.getElementById('trxEquivDisplay');
+const lastUpdated      = document.getElementById('lastUpdated');
+const slippagePanel    = document.getElementById('slippagePanel');
+const slippageToggle   = document.getElementById('slippageToggle');
+const slippageDisplay  = document.getElementById('slippageDisplay');
+const privateKeyInput  = document.getElementById('privateKeyInput');
+const txCard           = document.getElementById('txCard');
+const txDot            = document.getElementById('txDot');
+const txStatusText     = document.getElementById('txStatusText');
+const txHashText       = document.getElementById('txHashText');
+const txLink           = document.getElementById('txLink');
+
+// ─── TOAST ──────────────────────────────────────────────────────────────────
+function toast(msg, type = 'success', icon = '✓') {
+  const el  = document.getElementById('toast');
+  const bar = document.getElementById('toastBar');
+  document.getElementById('toastMsg').textContent  = msg;
+  document.getElementById('toastIcon').textContent = icon;
+  el.className = `toast ${type} show`;
+
+  // Reset bar animation
+  bar.style.animation = 'none';
+  bar.offsetHeight;
+  bar.style.animation = 'loadbar 3s linear forwards';
+
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+// ─── FETCH PRICE ────────────────────────────────────────────────────────────
+async function fetchPrice() {
+  try {
+    const r = await fetch(`${API_BASE}/api/price`);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+
+    state.btcUsd = d.btcUsd;
+    state.trxUsd = d.trxPerUsdt ? d.trxPerUsdt / 1000 : 0; // approx
+
+    btcPriceDisplay.textContent = '$' + d.btcUsd.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    btcPriceSub.textContent     = `Live · CoinGecko + SunSwap`;
+    trxRateDisplay.textContent  = d.trxPerUsdt ? `${d.trxPerUsdt.toFixed(2)} USDT / 1000 TRX` : '—';
+    lastUpdated.textContent     = new Date().toLocaleTimeString();
+
+    // Re-run quote if user has input
+    if (parseFloat(btcInput.value) > 0) debouncedQuote();
+  } catch (e) {
+    btcPriceSub.textContent = 'Price fetch error: ' + e.message;
+    console.error('[fetchPrice]', e);
+  }
+}
+
+// ─── FETCH QUOTE ────────────────────────────────────────────────────────────
+let quoteTimer = null;
+function debouncedQuote() {
+  clearTimeout(quoteTimer);
+  quoteTimer = setTimeout(fetchQuote, 600);
+}
+
+async function fetchQuote() {
+  const amt = parseFloat(btcInput.value);
+  if (!amt || amt <= 0) {
+    usdtOutput.value = '';
+    btcUsdValue.textContent = '≈ $0.00';
+    usdtUsdValue.textContent = '≈ $0.00';
+    routeInfo.classList.remove('visible');
+    updateSwapBtn();
+    return;
+  }
+
+  // Optimistic USD estimate
+  if (state.btcUsd > 0) {
+    btcUsdValue.textContent = '≈ $' + (amt * state.btcUsd).toLocaleString('en-US', { maximumFractionDigits: 2 });
+  }
+
+  swapBtn.disabled = true;
+  swapBtn.innerHTML = '<span class="spinner"></span> Getting quote…';
+
+  try {
+    const r = await fetch(`${API_BASE}/api/quote`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ btcAmount: amt.toString(), slippageBps: state.slippageBps })
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+
+    state.quote = d;
+    const usdt = parseFloat(d.output.expectedAmount);
+
+    usdtOutput.value = usdt.toFixed(4);
+    btcUsdValue.textContent  = '≈ $' + parseFloat(d.input.usdValue).toLocaleString('en-US', { maximumFractionDigits: 2 });
+    usdtUsdValue.textContent = '≈ $' + usdt.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    trxEquivDisplay.textContent = d.trxEquivalent + ' TRX';
+
+    rateDisplay.textContent  = `1 BTC = ${parseFloat(d.rate).toLocaleString()} USDT`;
+    const impact = parseFloat(d.priceImpact);
+    impactDisplay.textContent = impact.toFixed(3) + '%';
+    impactDisplay.className = 'route-val ' + (impact < 0.5 ? 'impact-low' : impact < 2 ? 'impact-med' : 'impact-high');
+    feeDisplay.textContent   = '$' + parseFloat(d.dexFee).toFixed(4);
+    minOutDisplay.textContent = parseFloat(d.output.minAmount).toFixed(4) + ' USDT';
+
+    routeInfo.classList.add('visible');
+    updateSwapBtn();
+  } catch (e) {
+    toast('Quote error: ' + e.message, 'error', '✗');
+    swapBtn.innerHTML = 'Quote failed — retry';
+    swapBtn.disabled = false;
+    console.error('[fetchQuote]', e);
+  }
+}
+
+// ─── SWAP BUTTON STATE ──────────────────────────────────────────────────────
+function updateSwapBtn() {
+  const amt = parseFloat(btcInput.value);
+  if (!amt || amt <= 0) {
+    swapBtn.disabled  = true;
+    swapBtn.innerHTML = 'Enter an amount';
+    return;
+  }
+  if (!state.quote) {
+    swapBtn.disabled  = true;
+    swapBtn.innerHTML = 'Getting quote…';
+    return;
+  }
+  swapBtn.disabled  = false;
+  swapBtn.innerHTML = `⇄ Swap ${amt} BTC → ${parseFloat(state.quote.output.expectedAmount).toFixed(2)} USDT`;
+}
+
+// ─── EXECUTE SWAP ───────────────────────────────────────────────────────────
+async function executeSwap() {
+  if (!state.quote) return toast('No quote available', 'error', '✗');
+
+  const pk = privateKeyInput.value.trim();
+  if (!pk) return toast('Enter your TRON private key to sign', 'error', '⚠');
+  if (pk.length !== 64) return toast('Invalid private key length (must be 64 hex chars)', 'error', '⚠');
+
+  state.loading = true;
+  swapBtn.disabled = true;
+  swapBtn.innerHTML = '<span class="spinner"></span> Signing & broadcasting…';
+
+  txCard.classList.add('visible');
+  txDot.className = 'tx-dot pending';
+  txStatusText.textContent = 'Signing transaction…';
+  txHashText.textContent = '';
+
+  try {
+    const r = await fetch(`${API_BASE}/api/swap/execute`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        privateKey:  pk,
+        btcAmount:   state.quote.input.amount.toString(),
+        trxAmount:   state.quote.trxEquivalent,
+        minUsdtOut:  state.quote.output.minAmount,
+        slippageBps: state.slippageBps
+      })
+    });
+
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+
+    state.txid = d.txid;
+    txStatusText.textContent = 'Broadcast — awaiting confirmation…';
+    txHashText.textContent   = d.txid;
+    txLink.href = d.txUrl;
+
+    swapBtn.innerHTML = '<span class="spinner"></span> Confirming on TRON…';
+    toast('Transaction broadcast! Waiting for confirmation…', 'success', '📡');
+
+    pollTx(d.txid);
+
+  } catch (e) {
+    state.loading = false;
+    txDot.className = 'tx-dot failed';
+    txStatusText.textContent = 'Failed: ' + e.message;
+    swapBtn.disabled = false;
+    swapBtn.innerHTML = '⇄ Retry Swap';
+    toast(e.message, 'error', '✗');
+    console.error('[executeSwap]', e);
+  } finally {
+    // Clear key from DOM
+    setTimeout(() => { privateKeyInput.value = ''; }, 500);
+  }
+}
+
+// ─── POLL TX ────────────────────────────────────────────────────────────────
+function pollTx(txid) {
+  let tries = 0;
+  clearInterval(state.pollInterval);
+  state.pollInterval = setInterval(async () => {
+    tries++;
+    try {
+      const r = await fetch(`${API_BASE}/api/tx/${txid}`);
+      const d = await r.json();
+
+      if (d.status === 'confirmed') {
+        clearInterval(state.pollInterval);
+        txDot.className = 'tx-dot confirmed';
+        txStatusText.textContent = '✓ Confirmed on block #' + d.blockNum;
+        state.loading = false;
+        swapBtn.disabled = false;
+        swapBtn.innerHTML = '⇄ Swap Again';
+        toast('Swap confirmed! USDT is in your wallet.', 'success', '✓');
+        btcInput.value = '';
+        usdtOutput.value = '';
+        state.quote = null;
+        routeInfo.classList.remove('visible');
+        updateSwapBtn();
+      } else if (d.status === 'failed') {
+        clearInterval(state.pollInterval);
+        txDot.className = 'tx-dot failed';
+        txStatusText.textContent = 'Transaction failed on-chain';
+        state.loading = false;
+        swapBtn.disabled = false;
+        swapBtn.innerHTML = '⇄ Retry Swap';
+        toast('Transaction failed on-chain', 'error', '✗');
+      }
+
+      if (tries > 40) { // ~2 min timeout
+        clearInterval(state.pollInterval);
+        txStatusText.textContent = 'Timeout — check TronScan manually';
+        state.loading = false;
+        swapBtn.disabled = false;
+        swapBtn.innerHTML = '⇄ Retry Swap';
+      }
+    } catch (e) { /* network blip, keep polling */ }
+  }, 3000);
+}
+
+// ─── EVENTS ─────────────────────────────────────────────────────────────────
+btcInput.addEventListener('input', () => {
+  state.quote = null;
+  usdtOutput.value = '';
+  routeInfo.classList.remove('visible');
+  updateSwapBtn();
+  debouncedQuote();
+});
+
+swapBtn.addEventListener('click', () => {
+  if (!state.loading) executeSwap();
+});
+
+// Slippage toggle
+slippageToggle.addEventListener('click', () => {
+  slippagePanel.classList.toggle('visible');
+});
+
+document.querySelectorAll('.slip-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    document.querySelectorAll('.slip-opt').forEach(o => o.classList.remove('active'));
+    opt.classList.add('active');
+    state.slippageBps = parseInt(opt.dataset.bps);
+    slippageDisplay.textContent = (state.slippageBps / 100).toFixed(1) + '%';
+    if (state.quote) debouncedQuote();
+  });
+});
+
+document.querySelector('.slip-custom').addEventListener('input', function() {
+  const v = parseFloat(this.value);
+  if (!isNaN(v) && v > 0 && v <= 50) {
+    document.querySelectorAll('.slip-opt').forEach(o => o.classList.remove('active'));
+    state.slippageBps = Math.round(v * 100);
+    slippageDisplay.textContent = v.toFixed(1) + '%';
+    if (state.quote) debouncedQuote();
+  }
+});
+
+// Flip arrow (visual only — BTC is fixed from)
+document.getElementById('swapArrow').addEventListener('click', () => {
+  toast('BTC is the fixed input asset for this swap pair', 'success', 'ℹ');
+});
+
+// ─── INIT ───────────────────────────────────────────────────────────────────
+fetchPrice();
+setInterval(fetchPrice, 30000); // refresh every 30s
+
+// Load pool stats
+fetch(`${API_BASE}/api/pool/stats`)
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok && d.pools?.length) {
+      const p = d.pools[0];
+      if (p.liquidity) document.getElementById('poolLiquidity').textContent = p.liquidity;
+      if (p.volume24h) document.getElementById('poolVolume').textContent = p.volume24h;
+    }
+  }).catch(() => {});
+</script>
+</body>
+</html>
