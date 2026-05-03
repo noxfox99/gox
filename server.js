@@ -9,13 +9,27 @@
  */
 
 const express = require('express');
-const cors = require('cors');
-const axios = require('axios');
+const cors    = require('cors');
+const axios   = require('axios');
+const path    = require('path');
 const TronWeb = require('tronweb');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ─── Serve static HTML files from /public ───────────────────────────────────
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Root → dashboard
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'cryptobank.html'));
+});
+
+// /swap → swap widget
+app.get('/swap', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'swap-widget.html'));
+});
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 const TRON_FULL_NODE    = 'https://api.trongrid.io';
